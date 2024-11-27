@@ -21,19 +21,39 @@ Write a c program that does the following:
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <errno.h>
 #include <unistd.h>
 #include <sys/wait.h>
-#include <signal.h>
+#include <time.h>
 
-int main(int n){
-  pid_t p;
-  printf("%d about to create %d child processes\n", p, n);
-  while(n>0){
-  fork();
-  int z = //urandom thing;
-  wait(z);
-  printf("%d %d secs", p, z);
-  n--;
-}
+int main() {
+    pid_t pid, child_pid;
+    int status;
+    int n = 2;
+
+    printf("%d about to create 2 child processes.\n", getpid());
+
+    for (int i = 0; i < n; i++) {
+        pid = fork();
+        if (pid == 0) { // Child process
+            srand(time(NULL) ^ (getpid() << 16)); // Seed random with unique value per process
+            int random_secs = (rand() % 5) + 1; // Random number in range [1, 5]
+            printf("%d %dsec\n", getpid(), random_secs);
+            sleep(random_secs); // Sleep for the random duration
+            printf("%d finished after %d seconds.\n", getpid(), random_secs);
+            exit(random_secs); // Exit with the random seconds as the exit code
+        } else if (pid < 0) { // Error during fork
+            perror("Fork failed");
+            exit(EXIT_FAILURE);
+        }
+    }
+
+    // Parent process waits for one child to finish
+    child_pid = wait(&status);
+    if (WIFEXITED(status)) {
+        int sleep_time = WEXITSTATUS(status);
+        printf("Main Process %d is done. Child %d slept for %d sec\n", getpid(), child_pid, sleep_time);
+    }
+
+    // Parent process finishes here
+    return 0;
 }
